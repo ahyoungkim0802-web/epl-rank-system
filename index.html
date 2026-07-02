@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EPL RANK SYSTEM</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
+
+<style>
+/* =========================================================
+   EPL RANK SYSTEM — 라이브 TV 리더보드 (편집 가능 버전)
+   • 화면 우상단 ⚙ 버튼 또는 키보드 E → 관리자 편집창
+   • 이름 / 사진 / 점수를 직접 입력·업로드하면 즉시 저장됩니다
+   • 데이터는 이 컴퓨터(브라우저)에 저장됩니다
+   • 다른 기기로 옮길 때 : 편집창의 [내보내기]/[불러오기] 사용
+   • 전체화면(TV) : 키보드 F
+   ========================================================= */
+:root{
+  --bg:#070A10;--panel:#0E131C;--panel-line:#1C2634;
+  --ink:#EAF0F8;--ink-dim:#7C889A;
+  --gold:#E9B949;--gold-2:#F7DD8E;
+  --silver:#C7CDD6;--silver-2:#EDF1F6;
+  --bronze:#CE8149;--bronze-2:#EBAE79;
+  --blue:#3E86C9;--blue-2:#79B4EC;
+  --green:#5DA95F;--green-2:#93D495;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;width:100%;overflow:hidden;background:var(--bg)}
+body{font-family:"Rajdhani","Pretendard",sans-serif;color:var(--ink);
+  background:radial-gradient(120% 90% at 50% -10%,#121826 0%,#070A10 55%,#04060A 100%);
+  display:flex;align-items:center;justify-content:center}
+
+.stage{position:relative;width:100vw;height:100vh;
+  padding:clamp(12px,1.6vh,26px) clamp(16px,1.6vw,34px);
+  display:flex;flex-direction:column;gap:clamp(6px,0.9vh,14px)}
+.stage::before{content:"";position:absolute;inset:clamp(8px,1vh,18px);
+  border:1px solid rgba(233,185,73,.18);border-radius:14px;pointer-events:none;
+  box-shadow:inset 0 0 60px rgba(0,0,0,.6)}
+.corner{position:absolute;width:46px;height:46px;border:3px solid var(--gold);opacity:.55;pointer-events:none}
+.corner.tl{top:clamp(8px,1vh,18px);left:clamp(8px,1vw,18px);border-right:0;border-bottom:0;border-radius:14px 0 0 0}
+.corner.tr{top:clamp(8px,1vh,18px);right:clamp(8px,1vw,18px);border-left:0;border-bottom:0;border-radius:0 14px 0 0}
+.corner.bl{bottom:clamp(8px,1vh,18px);left:clamp(8px,1vw,18px);border-right:0;border-top:0;border-radius:0 0 0 14px}
+.corner.br{bottom:clamp(8px,1vh,18px);right:clamp(8px,1vw,18px);border-left:0;border-top:0;border-radius:0 0 14px 0}
+
+/* HEADER */
+.header{flex:0 0 auto;text-align:center;position:relative;padding-top:clamp(2px,0.6vh,10px)}
+.crown-top{width:clamp(22px,3vh,40px);margin:0 auto clamp(-4px,-0.4vh,-2px);color:var(--gold);filter:drop-shadow(0 0 12px rgba(233,185,73,.55))}
+.title{font-family:"Anton",sans-serif;font-size:clamp(30px,7vh,84px);line-height:.9;letter-spacing:.04em;transform:skewX(-7deg);display:inline-block}
+.title .epl{background:linear-gradient(180deg,#F7DD8E,#E9B949 42%,#B4841F);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 0 rgba(0,0,0,.4))}
+.title .rank{background:linear-gradient(180deg,#fff,#C7CDD6 55%,#8A93A1);-webkit-background-clip:text;background-clip:text;color:transparent}
+.tagline{margin-top:clamp(2px,0.5vh,8px);font-weight:700;letter-spacing:.42em;font-size:clamp(9px,1.5vh,17px);color:var(--gold);opacity:.9;text-indent:.42em}
+.livebar{position:absolute;top:clamp(2px,0.6vh,10px);right:0;display:flex;align-items:center;gap:12px}
+.live{display:flex;align-items:center;gap:7px;font-weight:700;letter-spacing:.18em;font-size:clamp(10px,1.5vh,16px);color:#FF5A5A}
+.live .dot{width:9px;height:9px;border-radius:50%;background:#FF5A5A;box-shadow:0 0 10px #FF5A5A;animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+.clock{font-weight:700;font-size:clamp(11px,1.6vh,18px);color:var(--ink-dim);letter-spacing:.06em}
+.gear{background:none;border:1px solid var(--panel-line);color:var(--ink-dim);width:34px;height:34px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
+.gear:hover{color:var(--gold);border-color:var(--gold)}
+.gear svg{width:18px;height:18px}
+
+/* BOARD */
+.board{flex:1 1 auto;display:flex;flex-direction:column;gap:clamp(5px,0.8vh,12px);min-height:0}
+.row{flex:1 1 0;min-height:0;display:grid;grid-template-columns:clamp(150px,17vw,300px) 1fr;align-items:center;
+  border:1.5px solid var(--rc);border-radius:12px;
+  background:linear-gradient(90deg,rgba(255,255,255,.02),rgba(0,0,0,.25));
+  box-shadow:inset 0 0 30px rgba(0,0,0,.45),0 0 22px -8px var(--rc);overflow:hidden;position:relative}
+.row::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--rc);box-shadow:0 0 18px var(--rc)}
+.tier{display:flex;align-items:center;gap:clamp(6px,0.9vw,16px);padding-left:clamp(14px,1.4vw,26px);height:100%}
+.tier-no{font-family:"Anton",sans-serif;font-size:clamp(26px,5.2vh,60px);color:var(--rc);transform:skewX(-7deg);min-width:1.6ch;text-align:center;text-shadow:0 0 18px var(--rc)}
+.badge{width:clamp(34px,5.4vh,64px);height:clamp(34px,5.4vh,64px);flex:0 0 auto;display:flex;align-items:center;justify-content:center;color:var(--rc);position:relative}
+.badge svg{width:58%;height:58%;filter:drop-shadow(0 0 8px var(--rc))}
+.badge::before{content:"";position:absolute;inset:0;background:linear-gradient(160deg,rgba(255,255,255,.10),rgba(0,0,0,.4));border:2px solid var(--rc);clip-path:polygon(50% 0,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);box-shadow:0 0 16px -4px var(--rc)}
+.tier-name{font-family:"Anton",sans-serif;letter-spacing:.03em;font-size:clamp(15px,2.9vh,34px);color:var(--ink);text-transform:uppercase;line-height:1}
+.tier-name small{display:block;font-family:"Rajdhani";font-weight:600;font-size:clamp(8px,1.2vh,13px);letter-spacing:.14em;color:var(--ink-dim);margin-top:2px}
+
+.track-wrap{position:relative;height:100%;overflow:hidden;padding:clamp(6px,0.8vh,12px) clamp(10px,1vw,20px)}
+.toprank{position:absolute;top:-1px;left:50%;transform:translateX(-50%);font-family:"Rajdhani";font-weight:700;font-size:clamp(8px,1.1vh,13px);letter-spacing:.28em;color:#08121F;background:linear-gradient(180deg,#F7DD8E,#E9B949);padding:3px 16px;border-radius:0 0 8px 8px;z-index:3}
+.track{display:flex;gap:clamp(6px,0.7vw,14px);height:100%;align-items:stretch;transition:opacity .5s ease}
+.slot{flex:1 1 0;min-width:0;border:1.5px solid rgba(255,255,255,.06);border-radius:9px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(0,0,0,.35));display:flex;flex-direction:column;align-items:center;justify-content:center;gap:clamp(2px,0.5vh,6px);position:relative;overflow:hidden;padding:clamp(4px,0.7vh,10px) 4px}
+.slot.filled{border-color:var(--rc);background:linear-gradient(180deg,color-mix(in srgb,var(--rc) 14%,transparent),rgba(0,0,0,.5));box-shadow:inset 0 0 20px -6px var(--rc)}
+.avatar{width:min(72%,clamp(28px,7vh,86px));aspect-ratio:1;height:auto;border-radius:50%;object-fit:cover;border:2px solid var(--rc);box-shadow:0 0 12px -3px var(--rc);background:#0A0E14}
+.avatar-ph{display:flex;align-items:center;justify-content:center}
+.avatar-ph svg{width:52%;height:52%;color:var(--rc);opacity:.85}
+.slot.empty .avatar,.slot.empty .avatar-ph{opacity:.28;border-color:rgba(255,255,255,.12)}
+.slot .sname{font-family:"Pretendard";font-weight:700;font-size:clamp(11px,1.9vh,22px);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.slot .sscore{font-family:"Rajdhani";font-weight:700;font-size:clamp(9px,1.3vh,15px);color:var(--rc);letter-spacing:.05em}
+.slot .rankup{position:absolute;top:5px;right:6px;font-size:clamp(9px,1.4vh,15px);color:var(--gold-2);filter:drop-shadow(0 0 6px var(--gold));animation:rise 1.6s ease-in-out infinite}
+@keyframes rise{0%,100%{transform:translateY(0);opacity:.6}50%{transform:translateY(-3px);opacity:1}}
+.slot.empty .sname,.slot.empty .sscore{display:none}
+
+/* FOOTER */
+.footer{flex:0 0 auto;display:flex;align-items:center;justify-content:center;gap:clamp(14px,2vw,40px);padding-top:clamp(2px,0.5vh,8px)}
+.footer .trophy{width:clamp(20px,3vh,38px);color:var(--gold);filter:drop-shadow(0 0 12px rgba(233,185,73,.5))}
+.ticker{min-width:clamp(220px,34vw,620px);max-width:60vw;border:1px solid var(--panel-line);border-radius:8px;background:rgba(0,0,0,.35);padding:clamp(5px,0.8vh,10px) clamp(14px,1.4vw,26px);overflow:hidden}
+.ticker .label{font-family:"Rajdhani";font-weight:700;letter-spacing:.2em;font-size:clamp(8px,1.1vh,13px);color:var(--gold);margin-right:12px}
+.ticker .msg{font-family:"Pretendard";font-weight:600;font-size:clamp(11px,1.6vh,19px);color:var(--ink);transition:opacity .45s ease}
+.ticker .msg b{color:var(--gold-2)}
+.brand{font-family:"Rajdhani";font-weight:700;letter-spacing:.16em;font-size:clamp(9px,1.2vh,15px);color:var(--ink-dim)}
+
+/* ===== 관리자 편집창 ===== */
+.editor{position:fixed;inset:0;background:rgba(4,6,10,.86);backdrop-filter:blur(6px);z-index:100;display:none;padding:24px;overflow:auto}
+.editor.open{display:block}
+.ed-panel{max-width:1000px;margin:0 auto;background:var(--panel);border:1px solid var(--panel-line);border-radius:16px;overflow:hidden}
+.ed-head{display:flex;align-items:center;justify-content:space-between;padding:18px 24px;border-bottom:1px solid var(--panel-line);position:sticky;top:0;background:var(--panel);z-index:2}
+.ed-head h2{font-family:"Anton";letter-spacing:.04em;color:var(--gold);font-size:22px}
+.ed-head .sub{font-family:"Pretendard";font-size:12px;color:var(--ink-dim);margin-top:4px;font-weight:500}
+.ed-actions{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font-family:"Pretendard";font-weight:700;font-size:13px;padding:9px 14px;border-radius:8px;cursor:pointer;border:1px solid var(--panel-line);background:#141B26;color:var(--ink);transition:.15s}
+.btn:hover{border-color:var(--gold);color:var(--gold)}
+.btn.primary{background:linear-gradient(180deg,#F7DD8E,#E9B949);color:#0A0E14;border:none}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.ghost{color:var(--ink-dim)}
+.ed-body{padding:20px 24px}
+.ed-tier{margin-bottom:22px;border:1px solid var(--panel-line);border-radius:12px;overflow:hidden}
+.ed-tier-head{display:flex;align-items:center;gap:10px;padding:12px 16px;border-left:5px solid var(--rc);background:rgba(255,255,255,.02)}
+.ed-tier-head .tno{font-family:"Anton";color:var(--rc);font-size:18px}
+.ed-tier-head .tnm{font-family:"Anton";letter-spacing:.03em;font-size:16px}
+.ed-tier-head .tcount{margin-left:auto;font-family:"Pretendard";font-size:12px;color:var(--ink-dim)}
+.ed-rows{padding:12px 16px;display:flex;flex-direction:column;gap:10px}
+.ed-row{display:grid;grid-template-columns:56px 1fr 64px 34px;gap:10px;align-items:center}
+.ed-photo{width:56px;height:56px;border-radius:50%;border:2px dashed var(--panel-line);cursor:pointer;object-fit:cover;background:#0A0E14;display:flex;align-items:center;justify-content:center;color:var(--ink-dim);font-size:10px;text-align:center;overflow:hidden}
+.ed-photo.has{border-style:solid;border-color:var(--rc)}
+.ed-photo svg{width:22px;height:22px}
+.ed-input{font-family:"Pretendard";font-weight:600;background:#0B111A;border:1px solid var(--panel-line);color:var(--ink);border-radius:8px;padding:10px 12px;font-size:14px;width:100%}
+.ed-input:focus{outline:none;border-color:var(--gold)}
+.ed-up{display:flex;align-items:center;justify-content:center;gap:5px;font-family:"Pretendard";font-size:11px;color:var(--ink-dim);cursor:pointer;user-select:none}
+.ed-up input{width:16px;height:16px;accent-color:var(--gold)}
+.ed-del{background:none;border:1px solid var(--panel-line);color:#FF6B6B;border-radius:8px;height:38px;cursor:pointer;font-size:16px}
+.ed-del:hover{border-color:#FF6B6B}
+.ed-add{font-family:"Pretendard";font-weight:700;font-size:12px;color:var(--rc);background:none;border:1px dashed var(--rc);border-radius:8px;padding:9px;cursor:pointer;opacity:.8}
+.ed-add:hover{opacity:1}
+.pageind{position:absolute;top:6px;right:12px;font-family:"Rajdhani";font-weight:700;font-size:clamp(9px,1.2vh,14px);color:var(--ink-dim);letter-spacing:.08em;z-index:3;opacity:.75}
+.ed-mode{display:flex;align-items:center;gap:6px;margin-right:auto;font-family:"Pretendard";font-size:12px;color:var(--ink-dim)}
+.modebtn{font-family:"Pretendard";font-weight:700;font-size:12px;padding:8px 12px;border-radius:8px;border:1px solid var(--panel-line);background:#141B26;color:var(--ink-dim);cursor:pointer;transition:.15s}
+.modebtn.active{background:linear-gradient(180deg,#F7DD8E,#E9B949);color:#0A0E14;border:none}
+.ed-bulk{border:1px solid var(--panel-line);border-radius:12px;padding:14px 16px;margin-bottom:18px;background:rgba(233,185,73,.04)}
+.ed-bulk h3{font-family:"Pretendard";font-size:14px;color:var(--gold);margin-bottom:6px}
+.ed-bulk p{font-family:"Pretendard";font-size:11.5px;color:var(--ink-dim);line-height:1.55;margin-bottom:8px}
+.ed-bulk p b{color:var(--ink)}
+.ed-bulk textarea{width:100%;min-height:88px;background:#0B111A;border:1px solid var(--panel-line);border-radius:8px;color:var(--ink);font-family:"Pretendard";font-size:13px;padding:10px;resize:vertical}
+.ed-bulk textarea:focus{outline:none;border-color:var(--gold)}
+.ed-bulk .bulkbar{display:flex;align-items:center;gap:14px;margin-top:8px}
+.ed-bulk label{font-family:"Pretendard";font-size:12px;color:var(--ink-dim);display:flex;align-items:center;gap:6px;cursor:pointer}
+.ed-bulk label input{width:15px;height:15px;accent-color:var(--gold)}
+.ed-hint{font-family:"Pretendard";font-size:11px;color:var(--ink-dim);display:grid;grid-template-columns:56px 1fr 64px 34px;gap:10px;padding:0 16px 6px;font-weight:500}
+@media (max-width:640px){.ed-row,.ed-hint{grid-template-columns:48px 1fr;grid-auto-rows:auto}.ed-hint{display:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="stage">
+  <div class="corner tl"></div><div class="corner tr"></div><div class="corner bl"></div><div class="corner br"></div>
+  <header class="header">
+    <div class="livebar">
+      <span class="live"><span class="dot"></span>LIVE</span>
+      <span class="clock" id="clock">--:--</span>
+      <button class="gear" id="openEditor" title="편집 (E)"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 8a4 4 0 100 8 4 4 0 000-8zm8.9 4a7 7 0 00-.1-1l2-1.6-2-3.4-2.4 1a7 7 0 00-1.7-1L16 2H8l-.7 2.6a7 7 0 00-1.7 1l-2.4-1-2 3.4 2 1.6a7 7 0 000 2l-2 1.6 2 3.4 2.4-1a7 7 0 001.7 1L8 22h8l.7-2.6a7 7 0 001.7-1l2.4 1 2-3.4-2-1.6c.1-.3.1-.7.1-1z"/></svg></button>
+    </div>
+    <svg class="crown-top" viewBox="0 0 24 24" fill="currentColor"><path d="M3 8l4 3 5-6 5 6 4-3v9H3z"/></svg>
+    <div class="title"><span class="epl">EPL</span> <span class="rank">RANK SYSTEM</span></div>
+    <div class="tagline">READ · BUILD · EXPRESS · CREATE · INSPIRE</div>
+  </header>
+  <main class="board" id="board"></main>
+  <footer class="footer">
+    <svg class="trophy" viewBox="0 0 24 24" fill="currentColor"><path d="M6 3h12v3a4 4 0 0 1-1 2.6A5 5 0 0 1 13 11v3h2v2H9v-2h2v-3a5 5 0 0 1-4-2.4A4 4 0 0 1 6 6zm-3 1h2v2a3 3 0 0 1-2 0zm16 0h2v2a3 3 0 0 1-2 0zM7 18h10v3H7z"/></svg>
+    <div class="ticker"><span class="label">RECENT RANK-UP</span><span class="msg" id="ticker">—</span></div>
+    <span class="brand">EPL · EMPOWER · PRACTICE · LITERACY</span>
+  </footer>
+</div>
+
+<!-- 관리자 편집창 -->
+<div class="editor" id="editor">
+  <div class="ed-panel">
+    <div class="ed-head">
+      <div>
+        <h2>학생 관리</h2>
+        <div class="sub">이름·사진·점수를 입력하고 [저장]을 누르면 화면에 반영됩니다 · 데이터는 이 브라우저에 저장됩니다</div>
+      </div>
+      <div class="ed-actions">
+        <div class="ed-mode"><span>TV 표시</span>
+          <button class="modebtn" data-mode="top">상위권만</button>
+          <button class="modebtn" data-mode="all">전원 순환</button>
+        </div>
+        <button class="btn ghost" id="btnExport">내보내기</button>
+        <button class="btn ghost" id="btnImport">불러오기</button>
+        <button class="btn" id="btnClose">닫기</button>
+        <button class="btn primary" id="btnSave">저장</button>
+      </div>
+    </div>
+    <div class="ed-body" id="edBody"></div>
+  </div>
+</div>
+<input type="file" id="photoInput" accept="image/*" style="display:none">
+<input type="file" id="importInput" accept="application/json" style="display:none">
+
+<script>
+/* ===== 티어 정의 ===== */
+const TIERS = [
+  {no:"01",key:"AUTHOR", sub:"저자",   color:"var(--gold)",  icon:"crown"},
+  {no:"02",key:"CREATOR",sub:"창작자", color:"var(--silver)",icon:"nib"},
+  {no:"03",key:"WRITER", sub:"작가",   color:"var(--bronze)",icon:"pen"},
+  {no:"04",key:"BUILDER",sub:"설계자", color:"var(--blue)",  icon:"blocks"},
+  {no:"05",key:"READER", sub:"독자",   color:"var(--green)", icon:"compass"},
+];
+const CONFIG = {MIN_PER_ROW:6, MAX_PER_ROW:15, TOP_N:15, PAGE_INTERVAL:7000, TICKER_INTERVAL:4500};
+/* MIN_PER_ROW : 인원이 적을 때 카드가 너무 커지지 않도록 하는 최소 칸 수
+   MAX_PER_ROW : 한 줄 최대 칸 수. 이보다 많으면 자동 순환(페이지 전환)
+   → 이 두 숫자만 바꾸면 줄당 표시 인원과 카드 크기가 조절됩니다 */
+const STORE_KEY = "epl_rank_v1";
+const MODE_KEY  = "epl_rank_mode";
+/* 표시 모드 : 'top' 상위권만 상시 노출 | 'all' 전원 순환 노출 */
+let DISPLAY_MODE = localStorage.getItem(MODE_KEY) || 'top';
+const TIER_ALIAS = {AUTHOR:'AUTHOR','저자':'AUTHOR',CREATOR:'CREATOR','창작자':'CREATOR',
+  WRITER:'WRITER','작가':'WRITER',BUILDER:'BUILDER','설계자':'BUILDER',READER:'READER','독자':'READER'};
+
+const ICONS = {
+  crown:'<path d="M3 8l4 3 5-6 5 6 4-3v9H3z"/>',
+  nib:'<path d="M12 2l4 10-4 10-4-10z"/><circle cx="12" cy="12" r="2" fill="#0A0E14"/>',
+  pen:'<path d="M4 20l2 0L18 8l-2-2L4 18z"/><path d="M15 5l2-2 2 2-2 2z"/>',
+  blocks:'<rect x="8.5" y="3.5" width="7" height="7" rx="1"/><rect x="3" y="13.5" width="7" height="7" rx="1"/><rect x="14" y="13.5" width="7" height="7" rx="1"/>',
+  compass:'<circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M12 5l1.6 5.4L19 12l-5.4 1.6L12 19l-1.6-5.4L5 12l5.4-1.6z"/>'
+};
+
+/* ===== 초기(예시) 데이터 : 저장된 데이터가 없을 때만 사용 ===== */
+const SEED = {
+  AUTHOR:[{n:"김서윤",s:9820,up:true},{n:"이도현",s:9610},{n:"박지안",s:9440}],
+  CREATOR:[{n:"정하람",s:8710},{n:"최유진",s:8550,up:true},{n:"강시우",s:8390}],
+  WRITER:[{n:"오예린",s:7180},{n:"한지훈",s:7020},{n:"신아윤",s:6890},{n:"조민재",s:6740,up:true},{n:"권도윤",s:6610}],
+  BUILDER:[{n:"김하은",s:5420},{n:"이준서",s:5280},{n:"박수아",s:5110},{n:"정예준",s:4980},{n:"강로운",s:4720,up:true}],
+  READER:[{n:"김리안",s:3210},{n:"이서진",s:3080},{n:"박연우",s:2960},{n:"정지율",s:2840},{n:"최은서",s:2710}]
+};
+
+let RANK_DATA = load();
+
+/* ===== 저장/불러오기 ===== */
+function load(){
+  try{ const raw=localStorage.getItem(STORE_KEY); if(raw) return JSON.parse(raw); }catch(e){}
+  return JSON.parse(JSON.stringify(SEED));
+}
+function persist(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(RANK_DATA)); }
+  catch(e){ alert("저장 공간이 부족합니다. 사진 개수를 줄이거나 [내보내기]로 백업 후 정리해 주세요."); }
+}
+
+/* ===== 화면 렌더 ===== */
+const pageState={};
+function buildBoard(){
+  const board=document.getElementById('board'); board.innerHTML='';
+  TIERS.forEach((t,i)=>{
+    pageState[t.key]=0;
+    const row=document.createElement('div'); row.className='row'; row.style.setProperty('--rc',t.color);
+    row.innerHTML=`<div class="tier"><div class="tier-no">${t.no}</div>
+      <div class="badge"><svg viewBox="0 0 24 24" fill="currentColor">${ICONS[t.icon]}</svg></div>
+      <div class="tier-name">${t.key}</div></div>
+      <div class="track-wrap">${i===0?'<div class="toprank">TOP RANK</div>':''}<span class="pageind" id="pi-${t.key}"></span><div class="track" id="track-${t.key}"></div></div>`;
+    board.appendChild(row);
+  });
+}
+function sortedStudents(key){
+  return [...(RANK_DATA[key]||[])].sort((a,b)=>(b.s||0)-(a.s||0));
+}
+function renderTrack(key){
+  const track=document.getElementById('track-'+key); if(!track) return;
+  const students=sortedStudents(key); const count=students.length;
+  const MAX=CONFIG.MAX_PER_ROW, MIN=CONFIG.MIN_PER_ROW;
+  let cols, view, pageLabel='';
+  if(DISPLAY_MODE==='top'){            // 상위권만 : 점수 상위 TOP_N명 고정 노출
+    const n=Math.min(CONFIG.TOP_N,MAX);
+    view=students.slice(0,n);
+    cols=Math.max(view.length,MIN);
+  } else if(count>MAX){                // 전원 순환 : 초과 인원 페이지 전환
+    cols=MAX;
+    const pages=Math.ceil(count/MAX);
+    const page=pageState[key]%pages;
+    view=students.slice(page*MAX,page*MAX+MAX);
+    pageLabel=`${page+1} / ${pages}`;
+  } else {                            // 인원이 한 줄에 다 들어감
+    cols=Math.max(count,MIN);
+    view=students;
+  }
+  const pi=document.getElementById('pi-'+key); if(pi) pi.textContent=pageLabel;
+  const tier=TIERS.find(t=>t.key===key);
+  track.style.opacity=0;
+  setTimeout(()=>{
+    let html='';
+    for(let k=0;k<cols;k++){
+      const st=view[k];
+      if(st){
+        const av=st.photo?`<img class="avatar" src="${st.photo}" alt="">`
+          :`<div class="avatar avatar-ph"><svg viewBox="0 0 24 24" fill="currentColor">${ICONS[tier.icon]}</svg></div>`;
+        html+=`<div class="slot filled">${st.up?'<span class="rankup">▲</span>':''}${av}
+          <span class="sname">${esc(st.n||'')}</span></div>`;
+      } else {
+        html+=`<div class="slot empty"><div class="avatar avatar-ph"><svg viewBox="0 0 24 24" fill="currentColor">${ICONS[tier.icon]}</svg></div></div>`;
+      }
+    }
+    track.innerHTML=html; track.style.opacity=1;
+  },250);
+}
+function render(){ TIERS.forEach(t=>renderTrack(t.key)); }
+function cyclePages(){ if(DISPLAY_MODE!=='all')return; TIERS.forEach(t=>{const c=sortedStudents(t.key).length; if(c>CONFIG.MAX_PER_ROW){pageState[t.key]++;renderTrack(t.key);}});}
+
+/* 승급 티커 (up 표시된 학생 자동 수집) */
+function promotions(){const out=[];TIERS.forEach(t=>(RANK_DATA[t.key]||[]).forEach(s=>{if(s.up)out.push({name:s.n,to:t.key});}));return out;}
+let tickerIdx=0;
+function cycleTicker(){
+  const el=document.getElementById('ticker'); const list=promotions();
+  if(!list.length){el.textContent="EPL RANK SYSTEM";return;}
+  const p=list[tickerIdx%list.length]; el.style.opacity=0;
+  setTimeout(()=>{el.innerHTML=`<b>${esc(p.name)}</b> 학생이 <b>${p.to}</b> 등급으로 승급했습니다`;el.style.opacity=1;},220);
+  tickerIdx++;
+}
+function tick(){const d=new Date();document.getElementById('clock').textContent=`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+/* ===== 편집창 ===== */
+let editData=null, photoTarget=null;
+const editorEl=document.getElementById('editor');
+function openEditor(){ editData=JSON.parse(JSON.stringify(RANK_DATA)); renderEditor(); editorEl.classList.add('open'); }
+function closeEditor(){ editorEl.classList.remove('open'); }
+function renderEditor(){
+  const body=document.getElementById('edBody'); body.innerHTML='';
+  // 일괄 입력 영역
+  const bulk=document.createElement('div'); bulk.className='ed-bulk';
+  bulk.innerHTML=`<h3>일괄 입력 — 150명 빠르게 등록</h3>
+    <p>엑셀·메모장에서 <b>이름, 티어</b> 순서로 붙여넣으세요. 한 줄에 한 명, 쉼표 또는 탭으로 구분합니다.<br>
+    티어명: AUTHOR · CREATOR · WRITER · BUILDER · READER</p>
+    <textarea id="bulkText" placeholder="김서윤, AUTHOR&#10;이도현, WRITER&#10;박수아, READER"></textarea>
+    <div class="bulkbar">
+      <button class="btn primary" id="bulkApply">명단 추가</button>
+      <label><input type="checkbox" id="bulkOverwrite"> 기존 명단 지우고 새로 입력</label>
+    </div>`;
+  body.appendChild(bulk);
+  bulk.querySelector('#bulkApply').onclick=()=>applyBulk(bulk.querySelector('#bulkText').value, bulk.querySelector('#bulkOverwrite').checked);
+  TIERS.forEach(t=>{
+    if(!editData[t.key]) editData[t.key]=[];
+    const list=editData[t.key];
+    const sec=document.createElement('div'); sec.className='ed-tier'; sec.style.setProperty('--rc',t.color);
+    sec.innerHTML=`<div class="ed-tier-head"><span class="tno">${t.no}</span><span class="tnm">${t.key}</span><span class="tcount">${list.length}명</span></div>
+      <div class="ed-hint"><span>사진</span><span>이름</span><span>승급▲</span><span></span></div>
+      <div class="ed-rows" id="rows-${t.key}"></div>`;
+    body.appendChild(sec);
+    const rows=sec.querySelector('#rows-'+t.key);
+    list.forEach((st,idx)=>rows.appendChild(makeRow(t,idx,st)));
+    const add=document.createElement('button'); add.className='ed-add'; add.textContent='+ 학생 추가';
+    add.onclick=()=>{list.push({n:'',photo:'',up:false});renderEditor();};
+    rows.appendChild(add);
+  });
+}
+function makeRow(t,idx,st){
+  const row=document.createElement('div'); row.className='ed-row';
+  const ph=document.createElement('div'); ph.className='ed-photo'+(st.photo?' has':''); ph.style.setProperty('--rc',t.color);
+  ph.innerHTML=st.photo?`<img src="${st.photo}" style="width:100%;height:100%;object-fit:cover">`:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zm0 2c-4 0-8 2-8 5v1h16v-1c0-3-4-5-8-5z"/></svg>';
+  ph.title='클릭해서 사진 업로드';
+  ph.onclick=()=>{photoTarget={key:t.key,idx};document.getElementById('photoInput').click();};
+
+  const name=document.createElement('input'); name.className='ed-input'; name.placeholder='이름'; name.value=st.n||'';
+  name.oninput=e=>editData[t.key][idx].n=e.target.value;
+
+  const up=document.createElement('label'); up.className='ed-up';
+  up.innerHTML=`<input type="checkbox" ${st.up?'checked':''}>`;
+  up.querySelector('input').onchange=e=>editData[t.key][idx].up=e.target.checked;
+
+  const del=document.createElement('button'); del.className='ed-del'; del.textContent='×';
+  del.onclick=()=>{editData[t.key].splice(idx,1);renderEditor();};
+
+  row.append(ph,name,up,del); return row;
+}
+/* 일괄 입력 파서 */
+function applyBulk(text, overwrite){
+  const lines=(text||'').split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  if(!lines.length){alert('붙여넣은 내용이 없습니다.');return;}
+  if(overwrite){TIERS.forEach(t=>editData[t.key]=[]);}
+  let added=0,skipped=0;
+  lines.forEach(line=>{
+    const p=line.split(/[\t,]/).map(x=>x.trim());
+    const name=p[0];
+    const tierKey=TIER_ALIAS[p[1]]||TIER_ALIAS[(p[1]||'').toUpperCase()];
+    if(!name||!tierKey){skipped++;return;}
+    if(!editData[tierKey])editData[tierKey]=[];
+    editData[tierKey].push({n:name,photo:'',up:false});
+    added++;
+  });
+  renderEditor();
+  alert(`${added}명 추가 완료${skipped?` · ${skipped}줄 건너뜀(티어명 확인 필요)`:''}\n[저장]을 눌러 화면에 반영하세요.`);
+}
+/* 사진 업로드(220px 정사각 리사이즈) */
+document.getElementById('photoInput').addEventListener('change',e=>{
+  const file=e.target.files[0]; if(!file||!photoTarget)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{const img=new Image();img.onload=()=>{
+    const size=220,min=Math.min(img.width,img.height),c=document.createElement('canvas');
+    c.width=size;c.height=size;const ctx=c.getContext('2d');
+    ctx.drawImage(img,(img.width-min)/2,(img.height-min)/2,min,min,0,0,size,size);
+    editData[photoTarget.key][photoTarget.idx].photo=c.toDataURL('image/jpeg',0.82);
+    renderEditor();photoTarget=null;
+  };img.src=ev.target.result;};
+  reader.readAsDataURL(file); e.target.value='';
+});
+/* 저장 */
+document.getElementById('btnSave').onclick=()=>{
+  Object.keys(editData).forEach(k=>{editData[k]=editData[k].filter(s=>(s.n||'').trim()!=='');});
+  RANK_DATA=editData; persist(); render(); closeEditor();
+};
+document.getElementById('btnClose').onclick=closeEditor;
+document.getElementById('openEditor').onclick=openEditor;
+/* 내보내기 / 불러오기 */
+document.getElementById('btnExport').onclick=()=>{
+  const blob=new Blob([JSON.stringify(RANK_DATA,null,2)],{type:'application/json'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download='epl-rank-data.json';a.click();
+};
+document.getElementById('btnImport').onclick=()=>document.getElementById('importInput').click();
+document.getElementById('importInput').addEventListener('change',e=>{
+  const f=e.target.files[0];if(!f)return;const r=new FileReader();
+  r.onload=ev=>{try{editData=JSON.parse(ev.target.result);renderEditor();alert('불러왔습니다. [저장]을 눌러 반영하세요.');}catch(err){alert('파일을 읽을 수 없습니다.');}};
+  r.readAsText(f);e.target.value='';
+});
+/* 단축키 */
+document.addEventListener('keydown',e=>{
+  const k=e.key.toLowerCase();
+  if(k==='f'){if(!document.fullscreenElement)document.documentElement.requestFullscreen();else document.exitFullscreen();}
+  if(k==='e'&&!editorEl.classList.contains('open'))openEditor();
+  if(k==='escape'&&editorEl.classList.contains('open'))closeEditor();
+});
+
+/* 표시 모드 전환 */
+function updateModeButtons(){document.querySelectorAll('.modebtn').forEach(b=>b.classList.toggle('active',b.dataset.mode===DISPLAY_MODE));}
+document.querySelectorAll('.modebtn').forEach(b=>b.onclick=()=>{
+  DISPLAY_MODE=b.dataset.mode; localStorage.setItem(MODE_KEY,DISPLAY_MODE); updateModeButtons(); render();
+});
+
+/* INIT */
+updateModeButtons();
+buildBoard(); render();
+tick(); setInterval(tick,10000);
+cycleTicker(); setInterval(cycleTicker,CONFIG.TICKER_INTERVAL);
+setInterval(cyclePages,CONFIG.PAGE_INTERVAL);
+</script>
+</body>
+</html>
